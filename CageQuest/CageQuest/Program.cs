@@ -50,6 +50,11 @@ namespace CageQuest
         public Point Point { get; set; }
         public PlayerDirection Direction { get; set; }
 
+        public Step()
+        {
+
+        }
+
         public Step(Point p, PlayerDirection d)
         {
             Point = p;
@@ -134,7 +139,7 @@ namespace CageQuest
 
     public class Program
     {
-        public static Location currentLocation = new Location();
+        public static Location CurrentLocation { get; set; }
         public static PlayerDirection CurrentDirection { get; set; }
 
         public static List<Point> _visitedLocations = new List<Point>();
@@ -166,8 +171,8 @@ namespace CageQuest
                 Console.WriteLine("Продолжить? [Да] - F, [Выход] - Q");
                 HandleUserInput(Console.ReadLine(), true);
 
-                var startingPoint = new Point(4, 0);
-                _path.Push(new Step(startingPoint, CurrentDirection));
+                var startingPoint = new Step(new Point(4, 0), CurrentDirection);
+                _path.Push(startingPoint);
                 LoadLocation(startingPoint);
 
             }
@@ -179,23 +184,37 @@ namespace CageQuest
 
         }
 
-        public static void LoadLocation(Point p)
+        public static void LoadLocation(Step step)
         {
-            var location = currentLocation = _allLocations.First(location => location.X == p.X && location.Y == p.Y);
+            var location = _allLocations.FirstOrDefault(location => location.X == step.Point.X && location.Y == step.Point.Y);
 
-            _path.Push(new Step(p, CurrentDirection));
-
-            //Show location text/description of location
-            Console.WriteLine(location.Text);
-
-            if (!_visitedLocations.Contains(location))
+            if(location != null)
             {
-                _visitedLocations.Add(location);
+                CurrentLocation = location;
+                CurrentDirection = step.Direction;
+
+                _path.Push(step);
+
+                //Show location text/description of location
+                Console.WriteLine(location.Text);
+
+                if (!_visitedLocations.Contains(location))
+                {
+                    _visitedLocations.Add(location);
+                }
+                else
+                {
+                    Console.WriteLine("Вы здесь уже были.");
+                }
             }
             else
             {
-                Console.WriteLine("Вы здесь уже были.");
+                Console.WriteLine("Туда прохода нет!");
+
+                location = CurrentLocation;
             }
+
+            Console.WriteLine($"DEBUG: текущая локация ({step.Point.X},{step.Point.Y}) ");
 
             var userActions = string.Empty;
             switch (location.Type)
@@ -232,12 +251,12 @@ namespace CageQuest
                     break;
             }
             Console.WriteLine(userActions);
-            var nextLocation = HandleUserInput(Console.ReadLine());
+            var nextStep = HandleUserInput(Console.ReadLine());
 
-            LoadLocation(nextLocation);
+            LoadLocation(nextStep);
         }
 
-        public static Point HandleUserInput(string userInput, bool anyKey = false)
+        public static Step HandleUserInput(string userInput, bool anyKey = false)
         {
             //TODO Think about better solution
             if (anyKey)
@@ -251,64 +270,68 @@ namespace CageQuest
                 }
             }
 
-            Point nextLocation;
+            var nextStep = new Step();
 
-            var turner = new Turner(CurrentDirection, currentLocation);
+            var turner = new Turner(CurrentDirection, CurrentLocation);
 
             switch (userInput.ToLower())
             {
                 case "q":
                     throw new QuitGameException();
                 case "l":
-                    nextLocation = turner.GoLeft();
-                    ChangeDirection(UserAction.GoLeft);
+                    nextStep.Point = turner.GoLeft();
+                    nextStep.Direction = ChangeDirection(UserAction.GoLeft);
                     break;
                 case "r":
-                    nextLocation = turner.GoRight();
-                    ChangeDirection(UserAction.GoRight);
+                    nextStep.Point = turner.GoRight();
+                    nextStep.Direction = ChangeDirection(UserAction.GoRight);
                     break;
                 case "b":
                     _path.Pop();
                     var previousLocation = _path.Pop();
-                    nextLocation = previousLocation.Point;
-                    CurrentDirection = previousLocation.Direction;
+                    nextStep.Point = previousLocation.Point;
+                    nextStep.Direction = previousLocation.Direction;
                     break;
                 case "f":
-                    nextLocation = turner.GoForward();
+                    nextStep.Point = turner.GoForward();
+                    nextStep.Direction = CurrentDirection;
                     break;
                 default:
-                    nextLocation = turner.GoForward();
+                    nextStep.Point = turner.GoForward();
+                    nextStep.Direction = CurrentDirection;
                     break;
             }
 
-            return nextLocation;
+            return nextStep;
         }
 
-        public static void ChangeDirection(UserAction directionChange)
+        public static PlayerDirection ChangeDirection(UserAction directionChange)
         {
+            PlayerDirection nextDirection = CurrentDirection;
             switch (CurrentDirection) 
             {
                 case PlayerDirection.North:
-                    CurrentDirection = directionChange == UserAction.GoLeft
+                    nextDirection = directionChange == UserAction.GoLeft
                         ? PlayerDirection.West
                         : PlayerDirection.East;
                     break;
                 case PlayerDirection.East:
-                    CurrentDirection = directionChange == UserAction.GoLeft
+                    nextDirection = directionChange == UserAction.GoLeft
                         ? PlayerDirection.North
                         : PlayerDirection.South;
                     break;
                 case PlayerDirection.South:
-                    CurrentDirection = directionChange == UserAction.GoLeft
+                    nextDirection = directionChange == UserAction.GoLeft
                         ? PlayerDirection.East
                         : PlayerDirection.West;
                     break;
                 case PlayerDirection.West:
-                    CurrentDirection = directionChange == UserAction.GoLeft
+                    nextDirection = directionChange == UserAction.GoLeft
                         ? PlayerDirection.South
                         : PlayerDirection.North;
                     break;
             }
+            return nextDirection;
         }
     }
 }
