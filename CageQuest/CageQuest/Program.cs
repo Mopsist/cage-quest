@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -29,12 +30,12 @@ namespace CageQuest
             Y = location.Y;
         }
 
-        public static explicit operator Point(JObject obj)
-        {
-            return new Point(
-                obj["x"].Value<int>(), 
-                obj["y"].Value<int>());
-        }
+        //public static explicit operator Point(JObject obj)
+        //{
+        //    return new Point(
+        //        obj["x"].Value<int>(), 
+        //        obj["y"].Value<int>());
+        //}
 
     }
 
@@ -52,7 +53,6 @@ namespace CageQuest
 
         public Step()
         {
-
         }
 
         public Step(Point p, PlayerDirection d)
@@ -137,14 +137,19 @@ namespace CageQuest
         }
     }
 
+    public class PlayerSession
+    {
+        public List<Point> VisitedLocations { get; set; } = new List<Point>();
+        public Stack<Step> Path { get; set; } = new Stack<Step>();
+    }
+
     public class Program
     {
         public static Location CurrentLocation { get; set; }
         public static PlayerDirection CurrentDirection { get; set; }
 
-        public static List<Point> _visitedLocations = new List<Point>();
         public static List<Location> _allLocations = new List<Location>();
-        public static Stack<Step> _path = new Stack<Step>();
+        public static PlayerSession _currentSession = new PlayerSession();
 
         static void Main(string[] args)
         {
@@ -163,22 +168,33 @@ namespace CageQuest
 
             try
             {
-                Console.WriteLine(scripts["intro"].Value<string>());
-                Console.WriteLine("Продолжить? [Да] - F, [Выход] - Q");
-                HandleUserInput(Console.ReadLine(), true);
+                var gameFound = LoadGame();
 
-                Console.WriteLine(scripts["prologue"].Value<string>());
-                Console.WriteLine("Продолжить? [Да] - F, [Выход] - Q");
-                HandleUserInput(Console.ReadLine(), true);
+                if (!gameFound)
+                {
+                    Console.WriteLine(scripts["intro"].Value<string>());
+                    Console.WriteLine("Продолжить? [Да] - F, [Выход] - Q");
+                    HandleUserInput(Console.ReadLine(), true);
 
-                var startingPoint = new Step(new Point(4, 0), CurrentDirection);
-                _path.Push(startingPoint);
-                LoadLocation(startingPoint);
+                    Console.WriteLine(scripts["prologue"].Value<string>());
+                    Console.WriteLine("Продолжить? [Да] - F, [Выход] - Q");
+                    HandleUserInput(Console.ReadLine(), true);
+
+                    var startingPoint = new Step(new Point(4, 0), CurrentDirection);
+                    _currentSession.Path.Push(startingPoint);
+                    LoadLocation(startingPoint);
+                }
+                else
+                {
+                    Console.WriteLine("Вы вернулись! Загружаем сохранение...");
+                    LoadLocation(_currentSession.Path.Pop());
+                }
 
             }
             catch (QuitGameException ex)
             {
                 Console.WriteLine("Выход из игры. Чтобы закрыть консоль нажмите что-нибудь");
+                SaveProgress();
                 Console.ReadKey();
             }
 
@@ -193,14 +209,14 @@ namespace CageQuest
                 CurrentLocation = location;
                 CurrentDirection = step.Direction;
 
-                _path.Push(step);
+                _currentSession.Path.Push(step);
 
                 //Show location text/description of location
                 Console.WriteLine(location.Text);
 
-                if (!_visitedLocations.Contains(location))
+                if (!_currentSession.VisitedLocations.Contains(location))
                 {
-                    _visitedLocations.Add(location);
+                    _currentSession.VisitedLocations.Add(location);
                 }
                 else
                 {
@@ -287,8 +303,8 @@ namespace CageQuest
                     nextStep.Direction = ChangeDirection(UserAction.GoRight);
                     break;
                 case "b":
-                    _path.Pop();
-                    var previousLocation = _path.Pop();
+                    _currentSession.Path.Pop();
+                    var previousLocation = _currentSession.Path.Pop();
                     nextStep.Point = previousLocation.Point;
                     nextStep.Direction = previousLocation.Direction;
                     break;
@@ -332,6 +348,38 @@ namespace CageQuest
                     break;
             }
             return nextDirection;
+        }
+
+        public static void SaveProgress()
+        {
+            //maybe delete "WriteIndented = true" option after development
+            var jsonProgress = System.Text.Json.JsonSerializer.Serialize(_currentSession, new JsonSerializerOptions { WriteIndented = true });
+
+            File.WriteAllText("Resources/saved-progress.json", jsonProgress);
+        }
+
+        public static bool LoadGame()
+        {
+            var loaded = false;
+            try
+            {
+                var path = "Resources/saved-progress.json";
+                if (File.Exists(path))
+                {
+                    var jsonString = File.ReadAllText(path);
+                    var playerSession = System.Text.Json.JsonSerializer.Deserialize<PlayerSession>(jsonString);
+                    playerSession.Path = new Stack<Step>(playerSession.Path);
+                    _currentSession = playerSession;
+
+                    loaded = true;
+                }
+            }
+            catch
+            {
+                Console.WriteLine("Ошибка при загрузке сохранения :(");
+            }
+
+            return loaded;
         }
     }
 }

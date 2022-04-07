@@ -15,5 +15,9 @@
     </Content>
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="bin\Debug\net5.0\Resources\saved-progress.json" />
+  </ItemGroup>
+
 
 </Project>
