@@ -168,9 +168,15 @@ namespace CageQuest
 
             try
             {
-                var gameFound = LoadGame();
+                var gameFound = LoadSavedGame();
 
-                if (!gameFound)
+                Console.WriteLine("Добро пожаловать в Cage Quest!");
+                Console.WriteLine("↓↓↓ ГЛАВНОЕ МЕНЮ ↓↓↓\n");
+
+                var startNewGame = LoadMainMenu(gameFound);
+
+
+                if (startNewGame)
                 {
                     Console.WriteLine(scripts["intro"].Value<string>());
                     Console.WriteLine("Продолжить? [Да] - F, [Выход] - Q");
@@ -193,8 +199,8 @@ namespace CageQuest
             }
             catch (QuitGameException ex)
             {
-                Console.WriteLine("Выход из игры. Чтобы закрыть консоль нажмите что-нибудь");
                 SaveProgress();
+                Console.WriteLine("Выход из игры. Чтобы закрыть консоль нажмите что-нибудь");
                 Console.ReadKey();
             }
 
@@ -358,7 +364,7 @@ namespace CageQuest
             File.WriteAllText("Resources/saved-progress.json", jsonProgress);
         }
 
-        public static bool LoadGame()
+        public static bool LoadSavedGame()
         {
             var loaded = false;
             try
@@ -381,5 +387,54 @@ namespace CageQuest
 
             return loaded;
         }
+
+        /// <summary>
+        /// Load the main menu of the game 
+        /// </summary>
+        /// <param name="gameFound"></param>
+        /// <returns>
+        /// <see langword="true"/> - if player starts a new game, 
+        /// <see langword="false"/> - if continues saved game
+        /// </returns>
+        public static bool LoadMainMenu(bool gameFound)
+        {
+            if (gameFound)
+                Console.WriteLine("[Продолжить игру] - C");
+            Console.WriteLine("[Новая игра] - N");
+            Console.WriteLine("[Выход] - Q");
+            var userDecision = Console.ReadLine().ToLower();
+
+            switch (userDecision)
+            {
+                case "n":
+                    if (gameFound)
+                    {
+                        Console.WriteLine("Вы уверены, что хотите начать сначала? Сохраненный прогресс будет утерян.");
+                        Console.WriteLine("[Начать сначала] - N");
+                        Console.WriteLine("[Продолжить сохраненную игру] - C");
+                        switch (Console.ReadLine().ToLower())
+                        {
+                            case "c":
+                                return false;
+                            case "n":
+                                return true;
+                            case "q":
+                                throw new QuitGameException();
+                            default:
+                                return false;
+                        }
+                    }
+
+                    return true;
+                case "c":
+                    return !gameFound;
+                case "q":
+                    throw new QuitGameException();
+                default:
+                    return LoadMainMenu(gameFound);
+            }
+        }
+        
+
     }
 }
