@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Newtonsoft.Json;
@@ -154,17 +155,28 @@ namespace CageQuest
         static void Main(string[] args)
         {
             JObject scripts = new JObject();
-            using (StreamReader reader = new StreamReader("Resources/scripts.json"))
+
+            //TODO Delete after scripts.json will be completed
+            //using (StreamReader reader = new StreamReader("Resources/scripts.json"))
+            //{
+            //    string jsonString = reader.ReadToEnd();
+            //    scripts = JObject.Parse(jsonString);
+            //}
+
+            using (StreamReader reader = new StreamReader("Resources/scripts_encrypted.txt"))
             {
-                string jsonString = reader.ReadToEnd();
+                string encryptedScripts = reader.ReadToEnd();
+                string jsonString = EncryptionService.Decrypt(encryptedScripts);
                 scripts = JObject.Parse(jsonString);
             }
 
+            //TODO Implement the encryption approach from scripts.json
             using (StreamReader reader = new StreamReader("Resources/locations.json"))
             {
-                string jsonString = reader.ReadToEnd();               
+                string jsonString = reader.ReadToEnd();
                 _allLocations = JsonConvert.DeserializeObject<List<Location>>(jsonString);
             }
+
 
             try
             {

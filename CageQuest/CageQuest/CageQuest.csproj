@@ -16,6 +16,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="Resources\scripts_encrypted.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="bin\Debug\net5.0\Resources\saved-progress.json" />
   </ItemGroup>
 
