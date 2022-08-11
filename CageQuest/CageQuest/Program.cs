@@ -191,11 +191,11 @@ namespace CageQuest
                 if (startNewGame)
                 {
                     Console.WriteLine(scripts["intro"].Value<string>());
-                    Console.WriteLine("Продолжить? [Да] - F, [Выход] - Q");
+                    Console.WriteLine("Продолжить? [Да] - W, [Выход] - Q");
                     HandleUserInput(Console.ReadLine(), true);
 
                     Console.WriteLine(scripts["prologue"].Value<string>());
-                    Console.WriteLine("Продолжить? [Да] - F, [Выход] - Q");
+                    Console.WriteLine("Продолжить? [Да] - W, [Выход] - Q");
                     HandleUserInput(Console.ReadLine(), true);
 
                     var startingPoint = new Step(new Point(4, 0), CurrentDirection);
@@ -254,10 +254,10 @@ namespace CageQuest
             switch (location.Type)
             {
                 case LocationType.Enter:
-                    userActions = "[Идти вперед] - F, [Выход] - Q";
+                    userActions = "[Идти вперед] - W, [Выход] - Q";
                     break;
                 case LocationType.Tunnel:
-                    userActions = "[Идти вперед] - F, [Назад] - B, [Выход] - Q";
+                    userActions = "[Идти вперед] - W, [Назад] - S, [Выход] - Q";
                     break;
                 case LocationType.Fork:
                     foreach(var option in location.Options)
@@ -265,20 +265,20 @@ namespace CageQuest
                         switch (option)
                         {
                             case UserAction.GoLeft:
-                                userActions += "[Налево] - L ";
+                                userActions += "[Налево] - A ";
                                 break;
                             case UserAction.GoRight:
-                                userActions += "[Направо] - R ";
+                                userActions += "[Направо] - D ";
                                 break;
                             case UserAction.GoForward:
-                                userActions += "[Вперед] - F ";
+                                userActions += "[Вперед] - W ";
                                 break;
                         }
                     }
-                    userActions += "[Назад] - B, [Выход] - Q";
+                    userActions += "[Назад] - S, [Выход] - Q";
                     break;
                 case LocationType.DeadEnd:
-                    userActions = "[Назад] - B, [Выход] - Q";
+                    userActions = "[Назад] - S, [Выход] - Q";
                     break;
                 case LocationType.End:
                     userActions = "[Выход] - любая клавиша";
@@ -312,21 +312,21 @@ namespace CageQuest
             {
                 case "q":
                     throw new QuitGameException();
-                case "l":
+                case "a":
                     nextStep.Point = turner.GoLeft();
                     nextStep.Direction = ChangeDirection(UserAction.GoLeft);
                     break;
-                case "r":
+                case "d":
                     nextStep.Point = turner.GoRight();
                     nextStep.Direction = ChangeDirection(UserAction.GoRight);
                     break;
-                case "b":
+                case "s":
                     _currentSession.Path.Pop();
                     var previousLocation = _currentSession.Path.Pop();
                     nextStep.Point = previousLocation.Point;
                     nextStep.Direction = previousLocation.Direction;
                     break;
-                case "f":
+                case "w":
                     nextStep.Point = turner.GoForward();
                     nextStep.Direction = CurrentDirection;
                     break;
