@@ -191,15 +191,18 @@ namespace CageQuest
                 if (startNewGame)
                 {
                     Console.WriteLine(scripts["intro"].Value<string>());
-                    Console.WriteLine("Продолжить? [Да] - W, [Выход] - Q");
+                    Console.WriteLine("Продолжить? [Да] - W");
                     HandleUserInput(Console.ReadLine(), true);
 
                     Console.WriteLine(scripts["prologue"].Value<string>());
-                    Console.WriteLine("Продолжить? [Да] - W, [Выход] - Q");
+                    Console.WriteLine("Продолжить? [Да] - W");
                     HandleUserInput(Console.ReadLine(), true);
 
                     var startingPoint = new Step(new Point(4, 0), CurrentDirection);
                     _currentSession.Path.Push(startingPoint);
+
+                    Console.WriteLine("Подсказка: Для вызова справки нажмите [I]");
+
                     LoadLocation(startingPoint);
                 }
                 else
@@ -254,10 +257,10 @@ namespace CageQuest
             switch (location.Type)
             {
                 case LocationType.Enter:
-                    userActions = "[Идти вперед] - W, [Выход] - Q";
+                    userActions = "[Идти вперед] - W";
                     break;
                 case LocationType.Tunnel:
-                    userActions = "[Идти вперед] - W, [Назад] - S, [Выход] - Q";
+                    userActions = "[Идти вперед] - W, [Назад] - S";
                     break;
                 case LocationType.Fork:
                     foreach(var option in location.Options)
@@ -275,10 +278,10 @@ namespace CageQuest
                                 break;
                         }
                     }
-                    userActions += "[Назад] - S, [Выход] - Q";
+                    userActions += "[Назад] - S";
                     break;
                 case LocationType.DeadEnd:
-                    userActions = "[Назад] - S, [Выход] - Q";
+                    userActions = "[Назад] - S";
                     break;
                 case LocationType.End:
                     userActions = "[Выход] - любая клавиша";
@@ -287,7 +290,11 @@ namespace CageQuest
             Console.WriteLine(userActions);
             var nextStep = HandleUserInput(Console.ReadLine());
 
-            LoadLocation(nextStep);
+            //it can be null if user saved progress(t) or triggered info panel(i)
+            if (nextStep is not null)
+                LoadLocation(nextStep);
+            else
+                LoadLocation(step);
         }
 
         public static Step HandleUserInput(string userInput, bool anyKey = false)
@@ -310,8 +317,18 @@ namespace CageQuest
 
             switch (userInput.ToLower())
             {
+                case "i":
+                    Console.WriteLine("--------СПРАВКА--------");
+                    Console.WriteLine("T - [Сохранить]");
+                    Console.WriteLine("Q - [Сохранить и выйти]");
+                    Console.WriteLine("-----------------------");
+                    return null;
                 case "q":
                     throw new QuitGameException();
+                case "t":
+                    SaveProgress();
+                    Console.WriteLine("Прогресс сохранен");
+                    return null;
                 case "a":
                     nextStep.Point = turner.GoLeft();
                     nextStep.Direction = ChangeDirection(UserAction.GoLeft);
