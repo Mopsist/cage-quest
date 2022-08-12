@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -144,6 +145,28 @@ namespace CageQuest
         public Stack<Step> Path { get; set; } = new Stack<Step>();
     }
 
+    public static class Message
+    {
+        public static void Text(string text)
+        {
+            Console.WriteLine(text);
+        }
+
+        public static void Info(string text)
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine(text);
+            Console.ResetColor();
+        }
+
+        public static void Controls(string text)
+        {
+            Console.ForegroundColor = ConsoleColor.Blue;
+            Console.WriteLine(text);
+            Console.ResetColor();
+        }
+    }
+
     public class Program
     {
         public static Location CurrentLocation { get; set; }
@@ -151,24 +174,25 @@ namespace CageQuest
 
         public static List<Location> _allLocations = new List<Location>();
         public static PlayerSession _currentSession = new PlayerSession();
+        public static JObject _scripts;
 
         static void Main(string[] args)
         {
-            JObject scripts = new JObject();
+            Console.SetWindowSize(150, 30);
 
             //TODO Delete after scripts.json will be completed
-            //using (StreamReader reader = new StreamReader("Resources/scripts.json"))
+            using (StreamReader reader = new StreamReader("Resources/scripts.json"))
+            {
+                string jsonString = reader.ReadToEnd();
+                _scripts = JObject.Parse(jsonString);
+            }
+
+            //using (StreamReader reader = new StreamReader("Resources/scripts_encrypted.txt"))
             //{
-            //    string jsonString = reader.ReadToEnd();
+            //    string encryptedScripts = reader.ReadToEnd();
+            //    string jsonString = EncryptionService.Decrypt(encryptedScripts);
             //    scripts = JObject.Parse(jsonString);
             //}
-
-            using (StreamReader reader = new StreamReader("Resources/scripts_encrypted.txt"))
-            {
-                string encryptedScripts = reader.ReadToEnd();
-                string jsonString = EncryptionService.Decrypt(encryptedScripts);
-                scripts = JObject.Parse(jsonString);
-            }
 
             //TODO Implement the encryption approach from scripts.json
             using (StreamReader reader = new StreamReader("Resources/locations.json"))
@@ -182,32 +206,32 @@ namespace CageQuest
             {
                 var gameFound = LoadSavedGame();
 
-                Console.WriteLine("Добро пожаловать в Cage Quest!");
-                Console.WriteLine("↓↓↓ ГЛАВНОЕ МЕНЮ ↓↓↓\n");
+                Message.Info("Добро пожаловать в Cage Quest!");
+                Message.Info("↓↓↓ ГЛАВНОЕ МЕНЮ ↓↓↓\n");
 
                 var startNewGame = LoadMainMenu(gameFound);
 
 
                 if (startNewGame)
                 {
-                    Console.WriteLine(scripts["intro"].Value<string>());
-                    Console.WriteLine("Продолжить? [Да] - W");
+                    Message.Text(_scripts["intro"].Value<string>());
+                    Message.Controls("Продолжить? [Да] - W");
                     HandleUserInput(Console.ReadLine(), true);
 
-                    Console.WriteLine(scripts["prologue"].Value<string>());
-                    Console.WriteLine("Продолжить? [Да] - W");
+                    Message.Text(_scripts["prologue"].Value<string>());
+                    Message.Controls("Продолжить? [Да] - W");
                     HandleUserInput(Console.ReadLine(), true);
 
                     var startingPoint = new Step(new Point(4, 0), CurrentDirection);
                     _currentSession.Path.Push(startingPoint);
 
-                    Console.WriteLine("Подсказка: Для вызова справки нажмите [I]");
+                    Message.Info("Подсказка: Для вызова справки нажмите [I]");
 
                     LoadLocation(startingPoint);
                 }
                 else
                 {
-                    Console.WriteLine("Вы вернулись! Загружаем сохранение...");
+                    Message.Info("Вы вернулись! Загружаем сохранение...");
                     LoadLocation(_currentSession.Path.Pop());
                 }
 
@@ -215,7 +239,7 @@ namespace CageQuest
             catch (QuitGameException ex)
             {
                 SaveProgress();
-                Console.WriteLine("Выход из игры. Чтобы закрыть консоль нажмите что-нибудь");
+                Message.Info("Выход из игры. Чтобы закрыть консоль нажмите что-нибудь");
                 Console.ReadKey();
             }
 
@@ -233,7 +257,7 @@ namespace CageQuest
                 _currentSession.Path.Push(step);
 
                 //Show location text/description of location
-                Console.WriteLine(location.Text);
+                Message.Text(location.Text);
 
                 if (!_currentSession.VisitedLocations.Contains(location))
                 {
@@ -241,17 +265,17 @@ namespace CageQuest
                 }
                 else
                 {
-                    Console.WriteLine("Вы здесь уже были.");
+                    Message.Info("Вы здесь уже были.");
                 }
             }
             else
             {
-                Console.WriteLine("Туда прохода нет!");
+                Message.Info("Туда прохода нет!");
 
                 location = CurrentLocation;
             }
 
-            Console.WriteLine($"DEBUG: текущая локация ({step.Point.X},{step.Point.Y}) ");
+            //Message.Info($"DEBUG: текущая локация ({step.Point.X},{step.Point.Y}) ");
 
             var userActions = string.Empty;
             switch (location.Type)
@@ -284,10 +308,15 @@ namespace CageQuest
                     userActions = "[Назад] - S";
                     break;
                 case LocationType.End:
-                    userActions = "[Выход] - любая клавиша";
-                    break;
+                    Thread.Sleep(20000);
+                    Message.Controls("[Очнуться] - любая клавиша");
+                    Console.ReadLine();
+                    Message.Text(_scripts["final"].Value<string>());
+                    Message.Controls("[Выход] - любая клавиша");
+                    Console.ReadLine();
+                    return;
             }
-            Console.WriteLine(userActions);
+            Message.Controls(userActions);
             var nextStep = HandleUserInput(Console.ReadLine());
 
             //it can be null if user saved progress(t) or triggered info panel(i)
@@ -318,16 +347,16 @@ namespace CageQuest
             switch (userInput.ToLower())
             {
                 case "i":
-                    Console.WriteLine("--------СПРАВКА--------");
-                    Console.WriteLine("T - [Сохранить]");
-                    Console.WriteLine("Q - [Сохранить и выйти]");
-                    Console.WriteLine("-----------------------");
+                    Message.Info("--------СПРАВКА--------");
+                    Message.Info("T - [Сохранить]");
+                    Message.Info("Q - [Сохранить и выйти]");
+                    Message.Info("-----------------------");
                     return null;
                 case "q":
                     throw new QuitGameException();
                 case "t":
                     SaveProgress();
-                    Console.WriteLine("Прогресс сохранен");
+                    Message.Info("Прогресс сохранен");
                     return null;
                 case "a":
                     nextStep.Point = turner.GoLeft();
@@ -411,7 +440,7 @@ namespace CageQuest
             }
             catch
             {
-                Console.WriteLine("Ошибка при загрузке сохранения :(");
+                Message.Info("Ошибка при загрузке сохранения :(");
             }
 
             return loaded;
@@ -428,9 +457,9 @@ namespace CageQuest
         public static bool LoadMainMenu(bool gameFound)
         {
             if (gameFound)
-                Console.WriteLine("[Продолжить игру] - C");
-            Console.WriteLine("[Новая игра] - N");
-            Console.WriteLine("[Выход] - Q");
+                Message.Info("[Продолжить игру] - C");
+            Message.Info("[Новая игра] - N");
+            Message.Info("[Выход] - Q");
             var userDecision = Console.ReadLine().ToLower();
 
             switch (userDecision)
@@ -438,9 +467,9 @@ namespace CageQuest
                 case "n":
                     if (gameFound)
                     {
-                        Console.WriteLine("Вы уверены, что хотите начать сначала? Сохраненный прогресс будет утерян.");
-                        Console.WriteLine("[Начать сначала] - N");
-                        Console.WriteLine("[Продолжить сохраненную игру] - C");
+                        Message.Info("Вы уверены, что хотите начать сначала? Сохраненный прогресс будет утерян.");
+                        Message.Info("[Начать сначала] - N");
+                        Message.Info("[Продолжить сохраненную игру] - C");
                         switch (Console.ReadLine().ToLower())
                         {
                             case "c":
