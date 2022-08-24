@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Media;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -31,14 +32,6 @@ namespace CageQuest
             X = location.X;
             Y = location.Y;
         }
-
-        //public static explicit operator Point(JObject obj)
-        //{
-        //    return new Point(
-        //        obj["x"].Value<int>(), 
-        //        obj["y"].Value<int>());
-        //}
-
     }
 
     public class Location : Point
@@ -171,14 +164,20 @@ namespace CageQuest
     {
         public static Location CurrentLocation { get; set; }
         public static PlayerDirection CurrentDirection { get; set; }
+        public static bool MusicOn { get; set; }
 
         public static List<Location> _allLocations = new List<Location>();
         public static PlayerSession _currentSession = new PlayerSession();
         public static JObject _scripts;
 
+        private static SoundsService _soundsService = new SoundsService();
+
         static void Main(string[] args)
         {
             Console.SetWindowSize(150, 30);
+
+            _soundsService.PlayBackgroundMusic();
+            MusicOn = true;
 
             //TODO Delete after scripts.json will be completed
             using (StreamReader reader = new StreamReader("Resources/scripts.json"))
@@ -311,7 +310,7 @@ namespace CageQuest
                     Thread.Sleep(20000);
                     Message.Controls("[Очнуться] - любая клавиша");
                     Console.ReadLine();
-                    Message.Text(_scripts["final"].Value<string>());
+                    Message.Text(_scripts["epilogue"].Value<string>());
                     Message.Controls("[Выход] - любая клавиша");
                     Console.ReadLine();
                     return;
@@ -350,6 +349,7 @@ namespace CageQuest
                     Message.Info("--------СПРАВКА--------");
                     Message.Info("T - [Сохранить]");
                     Message.Info("Q - [Сохранить и выйти]");
+                    Message.Info("U - [Включить/выключить музыку]");
                     Message.Info("-----------------------");
                     return null;
                 case "q":
@@ -357,6 +357,18 @@ namespace CageQuest
                 case "t":
                     SaveProgress();
                     Message.Info("Прогресс сохранен");
+                    return null;
+                case "u":
+                    if (MusicOn)
+                    {
+                        _soundsService.StopBackgroundMusic();
+                        MusicOn = false;
+                    }
+                    else
+                    {
+                        _soundsService.PlayBackgroundMusic();
+                        MusicOn = true;
+                    }
                     return null;
                 case "a":
                     nextStep.Point = turner.GoLeft();
