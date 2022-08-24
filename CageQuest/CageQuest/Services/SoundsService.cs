@@ -2,11 +2,11 @@
 using System.Media;
 using NAudio.Wave;
 
-namespace CageQuest
+namespace CageQuest.Services
 {
     public class SoundsService
     {
-        private SoundPlayer _player;
+        private readonly SoundPlayer _player;
 
         public SoundsService()
         {

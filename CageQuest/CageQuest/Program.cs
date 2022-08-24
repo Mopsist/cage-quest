@@ -9,157 +9,11 @@ using System.Text.Json;
 using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using CageQuest.Core;
+using CageQuest.Services;
 
 namespace CageQuest
 {
-    public class Point
-    {
-        public int X { get; set; }
-        public int Y { get; set; }
-
-        public Point()
-        {
-        }
-
-        public Point(int x, int y)
-        {
-            X = x;
-            Y = y;
-        }
-
-        public Point(Location location)
-        {
-            X = location.X;
-            Y = location.Y;
-        }
-    }
-
-    public class Location : Point
-    {
-        public LocationType Type { get; set; }
-        public string Text { get; set; }
-        public IEnumerable<UserAction> Options { get; set; }
-    }
-
-    public class Step
-    {
-        public Point Point { get; set; }
-        public PlayerDirection Direction { get; set; }
-
-        public Step()
-        {
-        }
-
-        public Step(Point p, PlayerDirection d)
-        {
-            Point = p;
-            Direction = d;
-        }
-    }
-
-    public class Turner
-    {
-        private PlayerDirection _direction;
-        private Location _location;
-
-        public Turner(PlayerDirection direction, Location location)
-        {
-            _direction = direction;
-            _location = location;
-        }
-
-        public Point GoRight()
-        {
-            var nextLocation = new Point(_location);
-            switch (_direction)
-            {
-                case PlayerDirection.North:
-                    nextLocation.X++;
-                    break;
-                case PlayerDirection.East:
-                    nextLocation.Y--;
-                    break;
-                case PlayerDirection.South:
-                    nextLocation.X--;
-                    break;
-                case PlayerDirection.West:
-                    nextLocation.Y++;
-                    break;
-            }
-            return nextLocation;
-        }
-
-        public Point GoLeft()
-        {
-            var nextLocation = new Point(_location);
-            switch (_direction)
-            {
-                case PlayerDirection.North:
-                    nextLocation.X--;
-                    break;
-                case PlayerDirection.East:
-                    nextLocation.Y++;
-                    break;
-                case PlayerDirection.South:
-                    nextLocation.X++;
-                    break;
-                case PlayerDirection.West:
-                    nextLocation.Y--;
-                    break;
-            }
-            return nextLocation;
-        }
-
-        public Point GoForward()
-        {
-            var nextLocation = new Point(_location);
-            switch (_direction)
-            {
-                case PlayerDirection.North:
-                    nextLocation.Y++;
-                    break;
-                case PlayerDirection.East:
-                    nextLocation.X++;
-                    break;
-                case PlayerDirection.South:
-                    nextLocation.Y--;
-                    break;
-                case PlayerDirection.West:
-                    nextLocation.X--;
-                    break;
-            }
-            return nextLocation;
-        }
-    }
-
-    public class PlayerSession
-    {
-        public List<Point> VisitedLocations { get; set; } = new List<Point>();
-        public Stack<Step> Path { get; set; } = new Stack<Step>();
-    }
-
-    public static class Message
-    {
-        public static void Text(string text)
-        {
-            Console.WriteLine(text);
-        }
-
-        public static void Info(string text)
-        {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine(text);
-            Console.ResetColor();
-        }
-
-        public static void Controls(string text)
-        {
-            Console.ForegroundColor = ConsoleColor.Blue;
-            Console.WriteLine(text);
-            Console.ResetColor();
-        }
-    }
-
     public class Program
     {
         public static Location CurrentLocation { get; set; }
@@ -171,6 +25,7 @@ namespace CageQuest
         public static JObject _scripts;
 
         private static SoundsService _soundsService = new SoundsService();
+        private static SavesService _savesService = new SavesService();
 
         static void Main(string[] args)
         {
@@ -203,7 +58,13 @@ namespace CageQuest
 
             try
             {
-                var gameFound = LoadSavedGame();
+                var savedGame = _savesService.LoadSavedGame();
+                var gameFound = false;
+                if (savedGame is not null)
+                {
+                    gameFound = true;
+                    _currentSession = savedGame;
+                }
 
                 Message.Info("Добро пожаловать в Cage Quest!");
                 Message.Info("↓↓↓ ГЛАВНОЕ МЕНЮ ↓↓↓\n");
@@ -237,7 +98,7 @@ namespace CageQuest
             }
             catch (QuitGameException ex)
             {
-                SaveProgress();
+                _savesService.SaveProgress(_currentSession);
                 Message.Info("Выход из игры. Чтобы закрыть консоль нажмите что-нибудь");
                 Console.ReadKey();
             }
@@ -355,7 +216,7 @@ namespace CageQuest
                 case "q":
                     throw new QuitGameException();
                 case "t":
-                    SaveProgress();
+                    _savesService.SaveProgress(_currentSession);
                     Message.Info("Прогресс сохранен");
                     return null;
                 case "u":
@@ -424,38 +285,6 @@ namespace CageQuest
                     break;
             }
             return nextDirection;
-        }
-
-        public static void SaveProgress()
-        {
-            //maybe delete "WriteIndented = true" option after development
-            var jsonProgress = System.Text.Json.JsonSerializer.Serialize(_currentSession, new JsonSerializerOptions { WriteIndented = true });
-
-            File.WriteAllText("Resources/saved-progress.json", jsonProgress);
-        }
-
-        public static bool LoadSavedGame()
-        {
-            var loaded = false;
-            try
-            {
-                var path = "Resources/saved-progress.json";
-                if (File.Exists(path))
-                {
-                    var jsonString = File.ReadAllText(path);
-                    var playerSession = System.Text.Json.JsonSerializer.Deserialize<PlayerSession>(jsonString);
-                    playerSession.Path = new Stack<Step>(playerSession.Path);
-                    _currentSession = playerSession;
-
-                    loaded = true;
-                }
-            }
-            catch
-            {
-                Message.Info("Ошибка при загрузке сохранения :(");
-            }
-
-            return loaded;
         }
 
         /// <summary>
