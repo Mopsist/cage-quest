@@ -2,10 +2,11 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net5.0-windows</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="NAudio" Version="2.1.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="System.Windows.Extensions" Version="6.0.0" />
   </ItemGroup>
@@ -18,13 +19,12 @@
 
 
   <ItemGroup>
-    <None Remove="Resources\scott-buckley-i-walk-with-ghosts.wav" />
+    <None Remove="Resources\scott-buckley-i-walk-with-ghosts.mp3" />
     <None Remove="Resources\scripts_encrypted.txt" />
   </ItemGroup>
 
   <ItemGroup>
     <None Include="bin\Debug\net5.0\Resources\saved-progress.json" />
-    <None Include="bin\Debug\net5.0\Resources\scott-buckley-i-walk-with-ghosts.wav" />
   </ItemGroup>
 
 
